@@ -1,0 +1,26 @@
+{
+  "name": "cors",
+  "version": "1.0.0",
+  "main": "main.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start":"node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akshaynavale20/cors.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/akshaynavale20/cors/issues"
+  },
+  "homepage": "https://github.com/akshaynavale20/cors#readme",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.2"
+  }
+}
