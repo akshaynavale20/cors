@@ -20,7 +20,7 @@ const addSecurityHeaders = (req, res, next) => {
 
 // Proxy middleware for forwarding iframe and asset requests
 const proxy = createProxyMiddleware({
-  target: '', // This will be dynamically assigned
+  target: 'http://example.com', // Dummy target to satisfy the middleware
   changeOrigin: true,
   selfHandleResponse: false, // Let the proxy handle the response directly
   onProxyReq(proxyReq, req, res) {
@@ -36,6 +36,11 @@ const proxy = createProxyMiddleware({
     // Add security headers for COEP and COOP
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  },
+  router: function (req) {
+    // Dynamically change the target URL based on the iframe URL
+    const originalUrl = getOriginalUrl(req);
+    return originalUrl.origin; // Return the origin of the URL
   }
 });
 
