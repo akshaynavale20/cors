@@ -1,38 +1,54 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const axios = require('axios');
-
 const app = express();
 
-// Proxy middleware to handle the request and modify the response headers
-app.use('/proxy', async (req, res) => {
+// Function to determine the original URL from the iframe request
+const getOriginalUrl = (req) => {
+  const originalUrl = req.query.url;
+  if (!originalUrl) {
+    throw new Error('URL query parameter is required');
+  }
+  return new URL(originalUrl);
+};
+
+// Middleware to add COEP and COOP headers to the response
+const addSecurityHeaders = (req, res, next) => {
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  next();
+};
+
+// Proxy middleware for forwarding iframe and asset requests
+const proxy = createProxyMiddleware({
+  target: '', // This will be dynamically assigned
+  changeOrigin: true,
+  selfHandleResponse: false, // Let the proxy handle the response directly
+  onProxyReq(proxyReq, req, res) {
     try {
-        const targetUrl = req.query.url;
-        if (!targetUrl) {
-            return res.status(400).send('URL is required');
-        }
-
-        // Fetch the content from the target URL
-        const response = await axios.get(targetUrl, {
-            responseType: 'arraybuffer', // Use 'arraybuffer' if you want to handle binary data
-        });
-
-        // Set the headers you want to add or modify
-        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-
-        res.setHeader('Content-Type', response.headers['content-type']);
-
-        // Send the response data
-        res.status(response.status).send(response.data);
+      const originalUrl = getOriginalUrl(req); // Parse the original URL
+      proxyReq.setHeader('Host', originalUrl.hostname); // Set the correct host header
+      proxyReq.path = originalUrl.pathname + originalUrl.search; // Use the original URL path and query params
     } catch (error) {
-        console.error('Error fetching the URL:', error.message);
-        res.status(500).send('Failed to fetch the requested URL.');
+      res.status(400).send(error.message);
     }
+  },
+  onProxyRes(proxyRes, req, res) {
+    // Add security headers for COEP and COOP
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Proxy server is running on port ${PORT}`);
+// Main route to proxy iframe URL and assets
+app.use('/proxy', addSecurityHeaders, (req, res, next) => {
+  const originalUrl = req.query.url; // The original iframe URL
+  if (!originalUrl) {
+    return res.status(400).send('URL query parameter is required');
+  }
+  next();
+}, proxy);
+
+// Start the server
+app.listen(3000, () => {
+  console.log('Proxy server running on port 3000');
 });
