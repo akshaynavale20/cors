@@ -19,7 +19,7 @@ app.use('/proxy', async (req, res) => {
 
         // Set the headers you want to add or modify
         res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        res.setHeader('Cross-Origin-Opener-Policy', 'cross-origin');
         res.setHeader('Content-Type', response.headers['content-type']);
 
         // Send the response data
