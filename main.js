@@ -36,6 +36,7 @@ const proxy = createProxyMiddleware({
     // Add security headers for COEP and COOP
     res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   },
   router: function (req) {
     // Dynamically change the target URL based on the iframe URL
