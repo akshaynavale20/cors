@@ -1,61 +1,53 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const cors = require('cors');
+
 const app = express();
 
-// Function to determine the original URL from the iframe request
-const getOriginalUrl = (req) => {
-  const originalUrl = req.query.url;
-  if (!originalUrl) {
-    throw new Error('URL query parameter is required');
-  }
-  return new URL(originalUrl);
-};
+// Enable CORS for all requests
+app.use(cors());
 
-// Middleware to add COEP and COOP headers to the response
-const addSecurityHeaders = (req, res, next) => {
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+// Middleware to set headers for iframe embedding and CORS
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Set Cross-Origin-Resource-Policy to allow resources to be shared across origins
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-};
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  // Content-Security-Policy to allow embedding videos from trusted domains
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; frame-src https://www.youtube.com https://player.vimeo.com https://www.dailymotion.com;"
+  );
 
-// Proxy middleware for forwarding iframe and asset requests
-const proxy = createProxyMiddleware({
-  target: 'http://example.com', // Dummy target to satisfy the middleware
-  changeOrigin: true,
-  selfHandleResponse: false, // Let the proxy handle the response directly
-  onProxyReq(proxyReq, req, res) {
-    try {
-      const originalUrl = getOriginalUrl(req); // Parse the original URL
-      proxyReq.setHeader('Host', originalUrl.hostname); // Set the correct host header
-      proxyReq.path = originalUrl.pathname + originalUrl.search; // Use the original URL path and query params
-    } catch (error) {
-      res.status(400).send(error.message);
-    }
-  },
-  onProxyRes(proxyRes, req, res) {
-    // Add security headers for COEP and COOP
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  },
-  router: function (req) {
-    // Dynamically change the target URL based on the iframe URL
-    const originalUrl = getOriginalUrl(req);
-    return originalUrl.origin; // Return the origin of the URL
-  }
+  next();
 });
 
-// Main route to proxy iframe URL and assets
-app.use('/proxy', addSecurityHeaders, (req, res, next) => {
-  const originalUrl = req.query.url; // The original iframe URL
-  if (!originalUrl) {
-    return res.status(400).send('URL query parameter is required');
+// Proxy middleware to forward requests to the target URL
+app.use('/proxy', (req, res, next) => {
+  const targetUrl = req.query.url;
+
+  if (!targetUrl) {
+    res.status(400).send('Missing target URL in query parameter');
+    return;
   }
-  next();
-}, proxy);
+
+  // Proxy the request using http-proxy-middleware
+  createProxyMiddleware({
+    target: targetUrl,
+    changeOrigin: true,
+    selfHandleResponse: false, // Let the proxy handle the response automatically
+    onProxyReq: (proxyReq, req, res) => {
+      // Remove host header to avoid CORS issues
+      proxyReq.removeHeader('origin');
+    }
+  })(req, res, next);
+});
 
 // Start the server
-app.listen(3000, () => {
-  console.log('Proxy server running on port 3000');
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Proxy server is running on port ${PORT}`);
 });
