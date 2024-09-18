@@ -16,11 +16,7 @@ app.use((req, res, next) => {
   // Set Cross-Origin-Resource-Policy to allow resources to be shared across origins
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
-  // Content-Security-Policy to allow embedding videos from trusted domains
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; frame-src https://www.youtube.com https://player.vimeo.com https://www.dailymotion.com;"
-  );
+ 
 
   next();
 });
